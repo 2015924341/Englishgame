@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="Boggle单词游戏 - 点击字母选中，再次点击取消">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="manifest.json">
+    <title>Boggle单词游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .game-header h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .rule-tip {
+            background: #e8f4ff;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .rule-tip strong {
+            color: #e74c3c;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+
+        .score, .timer {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .score span {
+            color: #27ae60;
+            font-size: 24px;
+            margin-left: 8px;
+        }
+
+        .timer span {
+            color: #e74c3c;
+            font-size: 24px;
+            margin-left: 8px;
+        }
+
+        .current-word {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            background: #e8f4ff;
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            min-height: 90px;
+            word-break: break-all;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .current-word:active {
+            transform: scale(0.98);
+            background: #d4eaff;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-size: clamp(20px, 6vw, 32px);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            position: relative;
+        }
+
+        .cell.selected {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            transform: scale(0.95);
+        }
+
+        .cell.selected::after {
+            content: "✓";
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #27ae60;
+            color: white;
+            font-size: 12px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell:active {
+            transform: scale(0.92);
+        }
+
+        .game-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .game-controls button {
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .game-controls button:active {
+            transform: scale(0.96);
+        }
+
+        .game-controls button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-start { background: #2ecc71; }
+        .btn-reset { background: #e74c3c; }
+        .btn-submit { background: #3498db; }
+
+        .word-management {
+            border-top: 2px solid #e9ecef;
+            padding-top: 20px;
+            margin-top: 10px;
+        }
+
+        .add-word-section {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .add-word-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .add-word-input-group input {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-family: inherit;
+        }
+
+        .add-word-input-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .add-word-input-group button {
+            padding: 12px 24px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .batch-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .batch-btn {
+            flex: 1;
+            padding: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .batch-btn-danger {
+            background: #e74c3c;
+        }
+
+        .batch-btn-warning {
+            background: #f39c12;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .word-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .custom-words, .found-words {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 12px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .word-sections h3 {
+            margin-bottom: 12px;
+            color: #2c3e50;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .word-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-word {
+            color: #e74c3c;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #95a5a6;
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        .install-prompt {
+            margin-top: 20px;
+            padding: 15px 20px;
+            background: #e8f4ff;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .install-prompt button {
+            padding: 8px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .message-toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 40px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            animation: slideDown 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .game-container {
+                padding: 16px;
+            }
+            
+            .game-grid {
+                gap: 8px;
+            }
+            
+            .word-sections {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .batch-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>📝 Boggle 单词游戏</h1>
+        </div>
+        
+        <div class="rule-tip">
+            ⚡ 规则：<strong>点击字母选中</strong>，<strong>再次点击取消选中</strong>！<strong>点击单词区域清空所有</strong>！单词长度3-7个字母！
+        </div>
+        
+        <div class="game-stats">
+            <div class="score">⭐ 得分: <span id="score">0</span></div>
+            <div class="timer">⏱️ 时间: <span id="timer">03:00</span></div>
+        </div>
+        
+        <div class="current-word" id="currentWord" title="点击清空所有选中">✨ 点击字母开始</div>
+        
+        <div class="game-grid" id="gameGrid"></div>
+        
+        <div class="game-controls">
+            <button class="btn-start" id="startBtn">▶ 开始游戏</button>
+            <button class="btn-reset" id="resetBtn">🔄 重置</button>
+            <button class="btn-submit" id="submitBtn">✓ 提交单词</button>
+        </div>
+        
+        <div class="word-management">
+            <div class="add-word-section">
+                <div class="add-word-input-group">
+                    <input type="text" id="newWord" placeholder="输入单个单词 (3-7个字母)" maxlength="7" autocomplete="off">
+                    <button id="addWordBtn">➕ 添加</button>
+                </div>
+                
+                <div class="batch-buttons">
+                    <button class="batch-btn" id="importFileBtn">📁 从TXT导入</button>
+                    <button class="batch-btn batch-btn-warning" id="exportWordsBtn">💾 导出词库</button>
+                    <button class="batch-btn batch-btn-danger" id="clearCustomBtn">🗑️ 清空自定义</button>
+                </div>
+                <input type="file" id="fileInput" accept=".txt" class="file-input">
+                <div style="font-size: 12px; color: #7f8c8d; margin-top: 8px;">
+                    💡 提示：TXT文件每行一个单词，单词长度3-7个字母
+                </div>
+            </div>
+            
+            <div class="word-sections">
+                <div class="custom-words">
+                    <h3>📚 自定义单词 <span id="customCount">0</span></h3>
+                    <div id="customWordsList">
+                        <div class="empty-message">暂无自定义单词</div>
+                    </div>
+                </div>
+                
+                <div class="found-words">
+                    <h3>✅ 已找到的单词 <span id="foundCount">0</span></h3>
+                    <div id="foundWordsList">
+                        <div class="empty-message">游戏中找到的单词会显示在这里</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="install-prompt" id="installPrompt" style="display: none;">
+            <p>📱 安装到主屏幕，获得更好的游戏体验！</p>
+            <button id="installBtn">立即安装</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 词库定义 ====================
+        const DEFAULT_WORD_LIST = [
+            'CAT', 'DOG', 'FISH', 'BIRD', 'TREE', 'SUN', 'MOON', 'STAR', 'CLOUD', 'RAIN',
+            'SNOW', 'WIND', 'FIRE', 'WATER', 'EARTH', 'AIR', 'BIG', 'SMALL', 'HOT', 'COLD',
+            'RED', 'BLUE', 'GREEN', 'BLACK', 'WHITE', 'PINK', 'RUN', 'JUMP', 'WALK', 'FLY',
+            'SWIM', 'EAT', 'DRINK', 'SLEEP', 'BOOK', 'PEN', 'CAR', 'BUS', 'HAPPY', 'SAD',
+            'FAST', 'SLOW', 'KIND', 'LOVE', 'GOOD', 'BAD', 'NICE', 'WARM', 'COOL', 'DARK',
+            'LIGHT', 'SOFT', 'HARD', 'EASY', 'CLEAN', 'DIRTY', 'FULL', 'EMPTY', 'OPEN', 'CLOSE',
+            'START', 'STOP', 'WORK', 'PLAY', 'STUDY', 'READ', 'WRITE', 'APPLE', 'GRAPE', 'MANGO',
+            'PEACH', 'LEMON', 'FLOWER', 'GARDEN', 'FOREST', 'RIVER', 'FRIEND', 'FAMILY', 'SCHOOL',
+            'TEACHER', 'STUDENT', 'WONDERFUL', 'BEAUTIFUL', 'EXCELLENT', 'PERFECT', 'AMAZING'
+        ];
+
+        // ==================== 游戏主类 ====================
+        class BoggleGame {
+            constructor() {
+                // 游戏状态
+                this.grid = Array(4).fill().map(() => Array(4).fill(''));
+                this.selectedCells = [];
+                this.currentWord = '';
+                this.foundWords = new Set();
+                this.score = 0;
+                this.timeLeft = 180;
+                this.gameActive = false;
+                this.timer = null;
+                
+                // 词库
+                this.customWords = new Set();
+                this.defaultWords = new Set(DEFAULT_WORD_LIST);
+                this.wordList = new Set();
+                
+                // 字母频率
+                this.letterFreq = this.getLetterFrequencies();
+                
+                // DOM元素
+                this.gridElement = document.getElementById('gameGrid');
+                this.scoreElement = document.getElementById('score');
+                this.timerElement = document.getElementById('timer');
+                this.currentWordElement = document.getElementById('currentWord');
+                this.foundWordsElement = document.getElementById('foundWordsList');
+                this.customWordsElement = document.getElementById('customWordsList');
+                this.customCountElement = document.getElementById('customCount');
+                this.foundCountElement = document.getElementById('foundCount');
+                
+                // 初始化
+                this.loadCustomWords();
+                this.updateWordList();
+                this.initEventListeners();
+                this.generateRandomGrid();
+                this.renderGrid();
+                this.updateCustomWordsDisplay();
+                this.updateFoundWordsDisplay();
+            }
+            
+            getLetterFrequencies() {
+                const freq = [];
+                const letters = {
+                    'A': 9, 'B': 2, 'C': 2, 'D': 4, 'E': 12, 'F': 2, 'G': 3,
+                    'H': 2, 'I': 9, 'J': 1, 'K': 1, 'L': 4, 'M': 2, 'N': 6,
+                    'O': 8, 'P': 2, 'Q': 1, 'R': 6, 'S': 4, 'T': 6, 'U': 4,
+                    'V': 1, 'W': 2, 'X': 1, 'Y': 2, 'Z': 1
+                };
+                
+                for (const [letter, count] of Object.entries(letters)) {
+                    for (let i = 0; i < count; i++) {
+                        freq.push(letter);
+                    }
+                }
+                return freq;
+            }
+            
+            generateRandomGrid() {
+                const letters = [];
+                for (let i = 0; i < 16; i++) {
+                    letters.push(this.letterFreq[Math.floor(Math.random() * this.letterFreq.length)]);
+                }
+                
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        this.grid[i][j] = letters[i * 4 + j];
+                    }
+                }
+            }
+            
+            renderGrid() {
+                this.gridElement.innerHTML = '';
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.textContent = this.grid[i][j];
+                        cell.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.onCellClick(i, j);
+                        });
+                        
+                        if (this.isSelected(i, j)) {
+                            cell.classList.add('selected');
+                        }
+                        
+                        this.gridElement.appendChild(cell);
+                    }
+                }
+            }
+            
+            isSelected(row, col) {
+                return this.selectedCells.some(([r, c]) => r === row && c === col);
+            }
+            
+            // 查找格子在当前单词中的位置
+            findCellIndex(row, col) {
+                return this.selectedCells.findIndex(([r, c]) => r === row && c === col);
+            }
+            
+            // 点击字母：未选中则添加，已选中则取消
+            onCellClick(row, col) {
+                if (!this.gameActive) {
+                    this.showMessage('请先点击"开始游戏"', 'info');
+                    return;
+                }
+                
+                const selectedIndex = this.findCellIndex(row, col);
+                
+                // 如果点击的是已选中的字母，取消选中（删除该字母及之后所有）
+                if (selectedIndex !== -1) {
+                    this.selectedCells = this.selectedCells.slice(0, selectedIndex);
+                    this.currentWord = this.selectedCells.map(([r, c]) => this.grid[r][c]).join('');
+                    this.updateCurrentWord();
+                    this.renderGrid();
+                    if (this.selectedCells.length === 0) {
+                        this.showMessage('已清空选择', 'info');
+                    }
+                    return;
+                }
+                
+                // 点击的是未选中的字母，添加
+                if (this.isSelected(row, col)) return;
+                
+                this.selectedCells.push([row, col]);
+                this.currentWord += this.grid[row][col];
+                
+                this.updateCurrentWord();
+                this.renderGrid();
+            }
+            
+            // 清空所有选中（点击当前单词区域触发）
+            clearAllSelection() {
+                if (this.selectedCells.length === 0) return;
+                this.selectedCells = [];
+                this.currentWord = '';
+                this.updateCurrentWord();
+                this.renderGrid();
+                this.showMessage('已清空所有选择', 'info');
+            }
+            
+            updateCurrentWord() {
+                if (this.currentWord) {
+                    this.currentWordElement.textContent = this.currentWord;
+                } else {
+                    this.currentWordElement.textContent = '✨ 点击字母开始（再次点击可取消）';
+                }
+            }
+            
+            calculateScore(word) {
+                const length = word.length;
+                if (length === 3) return 1;
+                if (length === 4) return 2;
+                if (length === 5) return 3;
+                if (length === 6) return 4;
+                if (length === 7) return 7;
+                return 0;
+            }
+            
+            // 提交单词 - 只加分，不清空选择！
+            submitWord() {
+                if (!this.gameActive) {
+                    this.showMessage('游戏未开始，请先点击"开始游戏"', 'info');
+                    return;
+                }
+                
+                if (!this.currentWord) {
+                    this.showMessage('请先选择字母组成单词', 'info');
+                    return;
+                }
+                
+                const word = this.currentWord.toUpperCase();
+                
+                // 长度验证
+                if (word.length < 3 || word.length > 7) {
+                    this.showMessage(`单词长度必须为3-7个字母（当前${word.length}个）`, 'error');
+                    return;  // 只提示，不清空
+                }
+                
+                // 重复验证
+                if (this.foundWords.has(word)) {
+                    this.showMessage(`单词 "${word}" 已经找到了！`, 'error');
+                    return;  // 只提示，不清空
+                }
+                
+                // 词库验证
+                if (!this.wordList.has(word)) {
+                    this.showMessage(`"${word}" 不是有效的单词！`, 'error');
+                    return;  // 只提示，不清空
+                }
+                
+                // 有效单词 - 加分，但不清空选择！
+                const points = this.calculateScore(word);
+                this.score += points;
+                this.foundWords.add(word);
+                
+                this.updateScore();
+                this.updateFoundWordsDisplay();
+                // 注意：这里没有调用 clearAllSelection()，保留当前选择
+                this.showMessage(`✓ 单词 "${word}" 有效！获得 ${points} 分`, 'success');
+            }
+            
+            updateScore() {
+                this.scoreElement.textContent = this.score;
+            }
+            
+            updateFoundWordsDisplay() {
+                this.foundWordsElement.innerHTML = '';
+                const sortedWords = Array.from(this.foundWords).sort();
+                
+                if (sortedWords.length === 0) {
+                    this.foundWordsElement.innerHTML = '<div class="empty-message">游戏中找到的单词会显示在这里</div>';
+                } else {
+                    sortedWords.forEach(word => {
+                        const points = this.calculateScore(word);
+                        const wordItem = document.createElement('div');
+                        wordItem.className = 'word-item';
+                        wordItem.innerHTML = `${word} <span style="color: #27ae60; font-weight: 600;">+${points}</span>`;
+                        this.foundWordsElement.appendChild(wordItem);
+                    });
+                }
+                
+                this.foundCountElement.textContent = this.foundWords.size;
+            }
+            
+            startGame() {
+                if (this.gameActive) return;
+                
+                this.resetGameState();
+                this.generateRandomGrid();
+                this.renderGrid();
+                this.gameActive = true;
+                
+                const startBtn = document.getElementById('startBtn');
+                startBtn.disabled = true;
+                startBtn.textContent = '🎮 游戏中...';
+                
+                this.startTimer();
+                this.showMessage('游戏开始！点击字母选中，再次点击取消！提交单词后不会自动清空，可点击单词区域手动清空', 'success');
+            }
+            
+            startTimer() {
+                if (this.timer) clearInterval(this.timer);
+                
+                this.timer = setInterval(() => {
+                    if (this.timeLeft > 0 && this.gameActive) {
+                        this.timeLeft--;
+                        const minutes = Math.floor(this.timeLeft / 60);
+                        const seconds = this.timeLeft % 60;
+                        this.timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    } else if (this.timeLeft === 0) {
+                        this.endGame();
+                    }
+                }, 1000);
+            }
+            
+            endGame() {
+                this.gameActive = false;
+                if (this.timer) clearInterval(this.timer);
+                
+                const startBtn = document.getElementById('startBtn');
+                startBtn.disabled = false;
+                startBtn.textContent = '▶ 开始游戏';
+                
+                this.showMessage(`游戏结束！最终得分: ${this.score}，共找到 ${this.foundWords.size} 个单词`, 'info');
+            }
+            
+            resetGame() {
+                if (this.timer) clearInterval(this.timer);
+                this.resetGameState();
+                this.generateRandomGrid();
+                this.renderGrid();
+                
+                const startBtn = document.getElementById('startBtn');
+                startBtn.disabled = false;
+                startBtn.textContent = '▶ 开始游戏';
+                
+                this.showMessage('游戏已重置', 'info');
+            }
+            
+            resetGameState() {
+                this.gameActive = false;
+                this.selectedCells = [];
+                this.currentWord = '';
+                this.foundWords.clear();
+                this.score = 0;
+                this.timeLeft = 180;
+                
+                this.updateScore();
+                this.timerElement.textContent = '03:00';
+                this.updateCurrentWord();
+                this.updateFoundWordsDisplay();
+                this.renderGrid();
+            }
+            
+            showMessage(message, type = 'error') {
+                const styles = {
+                    error: { bg: '#e74c3c', color: 'white', icon: '❌' },
+                    success: { bg: '#27ae60', color: 'white', icon: '✓' },
+                    info: { bg: '#3498db', color: 'white', icon: 'ℹ️' }
+                };
+                
+                const style = styles[type] || styles.error;
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message-toast';
+                msgDiv.style.background = style.bg;
+                msgDiv.style.color = style.color;
+                msgDiv.innerHTML = `${style.icon} ${message}`;
+                
+                document.body.appendChild(msgDiv);
+                
+                setTimeout(() => {
+                    msgDiv.style.animation = 'slideUp 0.3s ease';
+                    setTimeout(() => msgDiv.remove(), 300);
+                }, 2000);
+            }
+            
+            initEventListeners() {
+                document.getElementById('startBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+                document.getElementById('submitBtn').addEventListener('click', () => this.submitWord());
+                
+                document.getElementById('addWordBtn').addEventListener('click', () => this.addCustomWord());
+                document.getElementById('importFileBtn').addEventListener('click', () => this.importFromFile());
+                document.getElementById('exportWordsBtn').addEventListener('click', () => this.exportWords());
+                document.getElementById('clearCustomBtn').addEventListener('click', () => this.clearCustomWords());
+                
+                this.currentWordElement.addEventListener('click', () => this.clearAllSelection());
+                
+                const newWordInput = document.getElementById('newWord');
+                newWordInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addCustomWord();
+                });
+            }
+            
+            addCustomWord() {
+                const input = document.getElementById('newWord');
+                const word = input.value.trim().toUpperCase();
+                
+                if (!word) {
+                    this.showMessage('请输入单词', 'error');
+                    return;
+                }
+                
+                if (word.length < 3 || word.length > 7) {
+                    this.showMessage('单词长度必须在3-7个字母之间', 'error');
+                    return;
+                }
+                
+                if (this.wordList.has(word)) {
+                    this.showMessage(`单词 "${word}" 已存在`, 'error');
+                    return;
+                }
+                
+                this.customWords.add(word);
+                this.updateWordList();
+                this.saveCustomWords();
+                this.updateCustomWordsDisplay();
+                
+                input.value = '';
+                this.showMessage(`成功添加单词: ${word}`, 'success');
+            }
+            
+            importFromFile() {
+                const fileInput = document.getElementById('fileInput');
+                fileInput.click();
+                
+                fileInput.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const content = event.target.result;
+                        const lines = content.split(/\r?\n/);
+                        let added = 0;
+                        let skipped = 0;
+                        
+                        lines.forEach(line => {
+                            let word = line.trim().toUpperCase();
+                            word = word.replace(/[^\w]/g, '');
+                            
+                            if (word && word.length >= 3 && word.length <= 7 && !this.wordList.has(word)) {
+                                this.customWords.add(word);
+                                added++;
+                            } else if (word && (word.length < 3 || word.length > 7)) {
+                                skipped++;
+                            }
+                        });
+                        
+                        if (added > 0) {
+                            this.updateWordList();
+                            this.saveCustomWords();
+                            this.updateCustomWordsDisplay();
+                            this.showMessage(`成功导入 ${added} 个单词${skipped > 0 ? `，跳过 ${skipped} 个无效单词` : ''}`, 'success');
+                        } else {
+                            this.showMessage('没有找到有效单词（需要3-7个字母）', 'error');
+                        }
+                        
+                        fileInput.value = '';
+                    };
+                    
+                    reader.readAsText(file, 'UTF-8');
+                };
+            }
+            
+            exportWords() {
+                const allWords = [...this.defaultWords, ...this.customWords];
+                const sortedWords = allWords.sort();
+                const content = sortedWords.join('\n');
+                
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `boggle_wordlist_${new Date().toISOString().slice(0,10)}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.showMessage(`导出成功！共 ${sortedWords.length} 个单词`, 'success');
+            }
+            
+            clearCustomWords() {
+                if (this.customWords.size === 0) {
+                    this.showMessage('没有自定义单词可清除', 'info');
+                    return;
+                }
+                
+                if (confirm(`确定要清空所有 ${this.customWords.size} 个自定义单词吗？`)) {
+                    this.customWords.clear();
+                    this.updateWordList();
+                    this.saveCustomWords();
+                    this.updateCustomWordsDisplay();
+                    this.showMessage('已清空所有自定义单词', 'success');
+                }
+            }
+            
+            removeCustomWord(word) {
+                if (this.customWords.has(word)) {
+                    this.customWords.delete(word);
+                    this.updateWordList();
+                    this.saveCustomWords();
+                    this.updateCustomWordsDisplay();
+                    this.showMessage(`已删除单词: ${word}`, 'success');
+                }
+            }
+            
+            updateWordList() {
+                this.wordList = new Set([...this.defaultWords, ...this.customWords]);
+            }
+            
+            updateCustomWordsDisplay() {
+                this.customWordsElement.innerHTML = '';
+                const sortedWords = Array.from(this.customWords).sort();
+                
+                if (sortedWords.length === 0) {
+                    this.customWordsElement.innerHTML = '<div class="empty-message">暂无自定义单词</div>';
+                } else {
+                    sortedWords.forEach(word => {
+                        const wordItem = document.createElement('div');
+                        wordItem.className = 'word-item';
+                        wordItem.innerHTML = `
+                            ${word}
+                            <span class="delete-word" data-word="${word}">🗑️ 删除</span>
+                        `;
+                        
+                        const deleteBtn = wordItem.querySelector('.delete-word');
+                        deleteBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.removeCustomWord(word);
+                        });
+                        
+                        this.customWordsElement.appendChild(wordItem);
+                    });
+                }
+                
+                this.customCountElement.textContent = this.customWords.size;
+            }
+            
+            saveCustomWords() {
+                try {
+                    localStorage.setItem('boggle_custom_words', JSON.stringify([...this.customWords]));
+                } catch (e) {
+                    console.error('保存失败:', e);
+                }
+            }
+            
+            loadCustomWords() {
+                try {
+                    const saved = localStorage.getItem('boggle_custom_words');
+                    if (saved) {
+                        this.customWords = new Set(JSON.parse(saved));
+                    }
+                } catch (e) {
+                    console.error('加载失败:', e);
+                }
+            }
+        }
+
+        // 启动游戏
+        const game = new BoggleGame();
+
+        // PWA 支持
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('Service Worker 注册成功');
+                }).catch(error => {
+                    console.log('Service Worker 注册失败:', error);
+                });
+            });
+        }
+
+        // 应用安装提示
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            const installPrompt = document.getElementById('installPrompt');
+            if (installPrompt) {
+                installPrompt.style.display = 'flex';
+                
+                document.getElementById('installBtn').addEventListener('click', async () => {
+                    installPrompt.style.display = 'none';
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        deferredPrompt = null;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
