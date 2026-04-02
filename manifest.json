@@ -1,7 +1,7 @@
 {
-    "name": "Boggle单词游戏",
+    "name": "单词游戏",
     "short_name": "Boggle",
-    "description": "经典的Boggle单词游戏，支持自定义词库和批量导入",
+    "description": "单词游戏，支持自定义词库和批量导入",
     "start_url": "/",
     "display": "standalone",
     "orientation": "portrait",
