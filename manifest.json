@@ -2,7 +2,7 @@
     "name": "单词游戏",
     "short_name": "Wordgame",
     "description": "单词游戏，支持自定义词库和批量导入",
-    "start_url": "/",
+    "start_url": "./index.html",
     "display": "standalone",
     "orientation": "portrait",
     "theme_color": "#667eea",

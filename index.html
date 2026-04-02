@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <base href="./">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="点击字母选中，再次点击取消">
     <meta name="theme-color" content="#667eea">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <title>单词游戏</title>
     <style>
         * {
@@ -1081,7 +1082,7 @@
         // PWA 支持
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(error => {
+                navigator.serviceWorker.register('./sw.js').catch(error => {
                     console.log('Service Worker 注册失败:', error);
                 });
             });
